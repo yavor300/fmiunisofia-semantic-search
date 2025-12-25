@@ -1,0 +1,19 @@
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.ruff]
+line-length = 88
+lint.select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "B",  # bugbear
+    "I",  # import sorting
+]
+lint.ignore = [
+    "E501",
+]
