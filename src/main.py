@@ -1,181 +1,165 @@
+"""
+Main entry point for the Domain-Specific Intelligent Product Search Engine.
+
+This module provides a command-line interface for testing the search engine
+with either sample data or real product data.
+"""
+
 import os
-import re
+import sys
 
-import nltk
-import pandas as pd
-from nltk.corpus import stopwords
-from nltk.stem import SnowballStemmer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from src.search_engine import ProductSearchEngine
+from src.sample_data import generate_sample_data
 
-# Сваляне на stop words, ако липсват
-try:
-    nltk.data.find("corpora/stopwords")
-except LookupError:
-    nltk.download("stopwords")
+def print_results(results, query):
+    """Pretty print search results."""
+    print(f"\n{'='*80}")
+    print(f"Search Results for: '{query}'")
+    print(f"{'='*80}\n")
+    
+    if not results:
+        print("No results found.")
+        return
+    
+    for idx, result in enumerate(results, 1):
+        print(f"{idx}. {result['product'][:70]}")
+        print(f"   Brand: {result['brand']:<20} Price: ${result['price']}")
+        print(f"   Relevance Score: {result['score']:.4f}")
+        
+        if "description" in result and result["description"]:
+
+            desc = result["description"]
+            if len(desc) > 150:
+                desc = desc[:150] + "..."
+            print(f"   Description: {desc}")
+        
+        if "category" in result:
+            print(f"   Category: {result['category']}")
+        
+        if "top_terms" in result:
+            terms = ", ".join([f"{term}({weight})" for term, weight in result["top_terms"][:3]])
+            print(f"   Top Terms: {terms}")
+        
+        print()
 
 
-class ProductSearchEngine:
-    def __init__(self):
-        self.df = None
-        self.vectorizer = None
-        self.tfidf_matrix = None
-        self.stemmer = SnowballStemmer("english")
-        self.stop_words = set(stopwords.words("english"))
-
-    def load_data(self, file_path, limit=1000):
-        """
-        Зарежда данни от ЛОКАЛЕН файл.
-        """
-        print(f"Зареждане на данни от файл: {file_path}...")
-
-        if not os.path.exists(file_path):
-            print(f"ГРЕШКА: Файлът не е намерен на този път: {file_path}")
-            return
-
+def interactive_search(engine):
+    """Run interactive search loop."""
+    print("\n" + "="*80)
+    print("Interactive Search Mode")
+    print("="*80)
+    print("Enter your search queries (or 'quit' to exit)")
+    print("Example queries:")
+    print("  - 'cheap running shoes'")
+    print("  - 'budget bike under 300'")
+    print("  - 'premium laptop Dell'")
+    print("  - 'light mountain bike for trails'")
+    print("-"*80 + "\n")
+    
+    while True:
         try:
-            # Четем CSV-то
-            self.df = pd.read_csv(file_path, on_bad_lines="skip")
-            self.df = self.df.head(limit)
+            query = input("Search> ").strip()
+            
+            if query.lower() in ['quit', 'exit', 'q']:
+                print("Goodbye!")
+                break
+            
+            if not query:
+                continue
 
-            # --- Мапинг на колоните според вашата схема ---
-            # Вашите колони: title, final_price, description, brand
-
-            # Създаваме вътрешни унифицирани колони
-            # Използваме .get(), за да не гърми, ако някоя липсва, но очакваме да ги има
-            self.df["name"] = self.df["title"].fillna("")
-            self.df["brand"] = self.df["brand"].fillna("")
-            self.df["desc"] = self.df["description"].fillna("")
-            self.df["price_raw"] = self.df["final_price"].fillna(0)
-
-            # Изчисляваме числова цена за семантичното обогатяване
-            self.df["price_numeric"] = self.df["price_raw"].apply(self._clean_price)
-
-            # Филтрираме продукти без име
-            self.df = self.df[self.df["name"] != ""]
-
-            print(f"Успешно заредени {len(self.df)} продукта.")
-            print("Примерни данни:", self.df[["name", "price_numeric"]].head(1).values)
-
+            results = engine.search(query, top_k=5, verbose=True)
+            print_results(results, query)
+            
+        except KeyboardInterrupt:
+            print("\n\nGoodbye!")
+            break
         except Exception as e:
-            print(f"Грешка при зареждане: {e}")
-
-    def _clean_price(self, price_str):
-        if isinstance(price_str, (int, float)):
-            return float(price_str)
-        # Regex за извличане на числа от текст като "$23.99" или "23,99"
-        found = re.findall(r"[-+]?\d*\.\d+|\d+", str(price_str))
-        if found:
-            return float(found[0])
-        return 0.0
-
-    def preprocess_text(self, text):
-        if not text or pd.isna(text):
-            return ""
-        text = str(text).lower()
-        text = re.sub(r"[^a-z0-9\s]", "", text)
-        tokens = text.split()
-        tokens = [
-            self.stemmer.stem(word) for word in tokens if word not in self.stop_words
-        ]
-        return " ".join(tokens)
-
-    def semantic_enrichment(self):
-        """Задача 3: Добавяне на тагове (budget, premium) спрямо цената"""
-        print("Прилагане на семантично обогатяване...")
-        enriched_data = []
-
-        for _index, row in self.df.iterrows():
-            tags = []
-            price = row["price_numeric"]
-
-            # [cite_start]Правила за цени (Задача 3 от презентацията) [cite: 113, 114, 115]
-            if 0 < price < 30:
-                tags.append("budget affordable cheap low-cost")
-            elif price > 150:
-                tags.append("premium expensive high-end luxury")
-
-            # Комбинираме: Име + Марка + Описание + Тагове
-            content = f"{row['name']} {row['brand']} {row['desc']} {' '.join(tags)}"
-
-            processed = self.preprocess_text(content)
-            enriched_data.append(processed)
-
-        self.df["processed_content"] = enriched_data
-        # Чистим празните
-        self.df = self.df[self.df["processed_content"].str.len() > 0]
-
-    def build_index(self):
-        """Задача 4: Индексиране с TF-IDF [cite: 58, 59]"""
-        print("Изграждане на индекс (TF-IDF)...")
-        if self.df.empty:
-            print("Няма данни за индексиране.")
-            return
-
-        self.vectorizer = TfidfVectorizer(max_features=5000)
-        self.tfidf_matrix = self.vectorizer.fit_transform(self.df["processed_content"])
-        print(f"Индексът е готов. Размерност: {self.tfidf_matrix.shape}")
-
-    def search(self, query, top_k=5):
-        """Задача 9: Търсене с косинусова близост [cite: 161, 168]"""
-        if self.vectorizer is None:
-            return []
-
-        processed_query = self.preprocess_text(query)
-        if not processed_query:
-            return []
-
-        query_vec = self.vectorizer.transform([processed_query])
-        cosine_similarities = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
-        related_docs_indices = cosine_similarities.argsort()[:-top_k:-1]
-
-        results = []
-        for i in related_docs_indices:
-            if cosine_similarities[i] > 0:
-                item = self.df.iloc[i]
-                results.append(
-                    {
-                        "Product": item["name"],
-                        "Brand": item["brand"],
-                        "Price": item["price_raw"],  # Показваме оригиналната цена
-                        "Score": round(cosine_similarities[i], 3),
-                    }
-                )
-        return results
+            print(f"Error: {e}")
 
 
-if __name__ == "__main__":
-    # --- НАСТРОЙКА НА ПЪТЯ ---
-    # Тъй като показахте, че файлът е в друга папка, слагаме абсолютен път
-    # или относителен спрямо мястото, откъдето пускате скрипта.
+def run_demo_queries(engine):
+    """Run a set of demonstration queries."""
+    demo_queries = [
+        "cheap running shoes",
+        "budget bike under 300",
+        "premium laptop",
+        "light mountain bike",
+        "Nike shoes for running",
+        "expensive luxury bike",
+        "affordable laptop for students",
+        "bike with child seat",
+        "Trek mountain bike",
+        "headphones with noise cancelling"
+    ]
+    
+    print("\n" + "="*80)
+    print("Running Demo Queries")
+    print("="*80)
+    
+    for query in demo_queries:
+        results = engine.search(query, top_k=3)
+        print_results(results, query)
+        input("Press Enter to continue...")
 
-    # Вариант 1: Абсолютен път (най-сигурно)
-    csv_path = "/mnt/c/Users/Yavor/Downloads/Sofia-University-Facultet-of-Mathematcs-and-Informatics/Year-1/Semester-1/Information-Retrieval/eCommerce-dataset-samples/amazon-products.csv"
 
-    # Вариант 2: Ако копирате файла при main.py, използвайте просто:
-    # csv_path = "amazon-products.csv"
+def main():
+    """Main entry point."""
+    print("\n" + "="*80)
+    print("Domain-Specific Intelligent Product Search Engine")
+    print("="*80)
 
     engine = ProductSearchEngine()
 
-    # 1. Зареждане
-    engine.load_data(csv_path, limit=1000)
+    sample_data_path = "data/sample_products.csv"
 
-    # 2. Обогатяване и Индексиране
-    if engine.df is not None and not engine.df.empty:
-        engine.semantic_enrichment()
-        engine.build_index()
+    if len(sys.argv) > 1:
+        data_path = sys.argv[1]
+        if not os.path.exists(data_path):
+            print(f"ERROR: File not found: {data_path}")
+            return
+    else:
 
-        # 3. Търсене
-        test_query = "cheap running shoes"
-        print(f"\n--- Търсене за: '{test_query}' ---")
-        results = engine.search(test_query)
+        if not os.path.exists(sample_data_path):
+            print("\nGenerating sample data...")
+            generate_sample_data(sample_data_path)
+        data_path = sample_data_path
 
-        if not results:
-            print("Няма намерени резултати.")
+    print(f"\nLoading data from: {data_path}")
+    if not engine.load_data(data_path):
+        print("Failed to load data. Exiting.")
+        return
 
-        for r in results:
-            # Отрязваме името, ако е твърде дълго, за да се чете лесно в конзолата
-            short_name = (
-                (r["Product"][:60] + "..") if len(r["Product"]) > 60 else r["Product"]
-            )
-            print(f"[{r['Score']}] {short_name} | {r['Brand']} | {r['Price']}")
+    if not engine.build_index():
+        print("Failed to build index. Exiting.")
+        return
+
+    stats = engine.get_statistics()
+    print("\n" + "="*80)
+    print("Dataset Statistics")
+    print("="*80)
+    for key, value in stats.items():
+        print(f"{key.replace('_', ' ').title()}: {value}")
+
+    print("\n" + "="*80)
+    print("What would you like to do?")
+    print("="*80)
+    print("1. Run demo queries")
+    print("2. Interactive search")
+    print("3. Both")
+    
+    choice = input("\nEnter your choice (1-3): ").strip()
+    
+    if choice == "1":
+        run_demo_queries(engine)
+    elif choice == "2":
+        interactive_search(engine)
+    elif choice == "3":
+        run_demo_queries(engine)
+        interactive_search(engine)
+    else:
+        print("Invalid choice. Running interactive search by default.")
+        interactive_search(engine)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Search Engine - Web Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .status-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e0e0e0;
+        }
+
+        .status-indicator.active {
+            background: #4caf50;
+            box-shadow: 0 0 10px #4caf50;
+        }
+
+        .status-indicator.error {
+            background: #f44336;
+            box-shadow: 0 0 10px #f44336;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+
+        .config-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            height: fit-content;
+        }
+
+        .search-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .form-group input[type="number"],
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .checkbox-group:hover {
+            background: #ebebeb;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0 !important;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .help-text {
+            font-size: 0.85em;
+            color: #777;
+            margin-top: 5px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .search-btn:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .results-container {
+            margin-top: 20px;
+        }
+
+        .result-item {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .result-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .result-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .result-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .result-score {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .statistics {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .statistics h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .stat-item {
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #777;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .example-queries {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .example-queries h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+
+        .example-query {
+            display: inline-block;
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+
+        .example-query:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Semantic Search Engine</h1>
+            <p>Configure and test your intelligent product search system</p>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-indicator" id="engineStatus"></div>
+                <span id="engineStatusText">Not Initialized</span>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator" id="esStatus"></div>
+                <span id="esStatusText">Elasticsearch: Unknown</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Configuration Panel -->
+            <div class="config-panel">
+                <h2 class="panel-title">⚙️ Configuration</h2>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="useElasticsearch" checked>
+                        <label for="useElasticsearch">
+                            <strong>Use Elasticsearch</strong><br>
+                            <small class="help-text">Enable Elasticsearch for distributed search</small>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="useDependencyParsing">
+                        <label for="useDependencyParsing">
+                            <strong>Dependency Parsing</strong><br>
+                            <small class="help-text">Advanced NLP query enhancement</small>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="useEmbeddings">
+                        <label for="useEmbeddings">
+                            <strong>Word Embeddings</strong><br>
+                            <small class="help-text">Semantic similarity with neural embeddings</small>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="hybridAlpha">Hybrid Alpha (TF-IDF weight)</label>
+                    <input type="number" id="hybridAlpha" min="0" max="1" step="0.1" value="0.6">
+                    <small class="help-text">Balance between TF-IDF (1.0) and embeddings (0.0)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="topK">Results per query</label>
+                    <input type="number" id="topK" min="1" max="50" value="10">
+                </div>
+
+                <div class="form-group">
+                    <label for="dataLimit">Data limit (optional)</label>
+                    <input type="number" id="dataLimit" min="1" placeholder="Leave empty for all">
+                    <small class="help-text">Limit products for faster testing</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="dataFile">Data file path</label>
+                    <input type="text" id="dataFile" value="data/amazon-products.csv">
+                </div>
+
+                <button class="btn btn-primary" onclick="updateConfig()">Update Configuration</button>
+                <button class="btn btn-success" onclick="initializeEngine()">Initialize Engine</button>
+                <button class="btn btn-danger" onclick="resetEngine()">Reset Engine</button>
+
+                <div id="statistics" class="statistics" style="display: none;">
+                    <h3>📊 Statistics</h3>
+                    <div class="stat-grid" id="statsGrid"></div>
+                </div>
+            </div>
+
+            <!-- Search Panel -->
+            <div class="search-panel">
+                <h2 class="panel-title">🔎 Search</h2>
+                
+                <div id="alertContainer"></div>
+
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchQuery" placeholder="Enter your search query..." onkeypress="if(event.key==='Enter') performSearch()">
+                    <button class="search-btn" id="searchBtn" onclick="performSearch()" disabled>Search</button>
+                </div>
+
+                <div class="example-queries">
+                    <h4>Example queries:</h4>
+                    <span class="example-query" onclick="setQuery('cheap running shoes')">cheap running shoes</span>
+                    <span class="example-query" onclick="setQuery('Saucony running shoes')">Saucony running shoes</span>
+                    <span class="example-query" onclick="setQuery('safety vest under 30')">safety vest under 30</span>
+                    <span class="example-query" onclick="setQuery('solar lights for outdoor')">solar lights for outdoor</span>
+                    <span class="example-query" onclick="setQuery('premium laptop')">premium laptop</span>
+                    <span class="example-query" onclick="setQuery('budget bike under 300')">budget bike under 300</span>
+                </div>
+
+                <div id="resultsContainer" class="results-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let engineInitialized = false;
+        let currentConfig = {};
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStatus();
+            loadConfig();
+        });
+
+        // API call helper
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            const response = await fetch(`/api${endpoint}`, options);
+            return await response.json();
+        }
+
+        // Show alert
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertClass = `alert-${type}`;
+            alertContainer.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+            
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        // Load status
+        async function loadStatus() {
+            try {
+                const data = await apiCall('/status');
+                
+                engineInitialized = data.initialized;
+                
+                // Update engine status
+                const engineStatus = document.getElementById('engineStatus');
+                const engineStatusText = document.getElementById('engineStatusText');
+                
+                if (data.initialized) {
+                    engineStatus.classList.add('active');
+                    engineStatusText.textContent = 'Engine Initialized';
+                    document.getElementById('searchBtn').disabled = false;
+                } else {
+                    engineStatus.classList.remove('active');
+                    engineStatusText.textContent = 'Not Initialized';
+                    document.getElementById('searchBtn').disabled = true;
+                }
+
+                // Update ES status
+                const esStatus = document.getElementById('esStatus');
+                const esStatusText = document.getElementById('esStatusText');
+                
+                if (data.elasticsearch_status === 'connected') {
+                    esStatus.classList.add('active');
+                    esStatusText.textContent = 'Elasticsearch: Connected';
+                } else if (data.elasticsearch_status === 'not_used') {
+                    esStatus.classList.remove('active', 'error');
+                    esStatusText.textContent = 'Elasticsearch: Not Used';
+                } else {
+                    esStatus.classList.add('error');
+                    esStatusText.textContent = 'Elasticsearch: Disconnected';
+                }
+            } catch (error) {
+                console.error('Error loading status:', error);
+            }
+        }
+
+        // Load configuration
+        async function loadConfig() {
+            try {
+                const data = await apiCall('/config');
+                currentConfig = data.config;
+
+                // Update form fields
+                document.getElementById('useElasticsearch').checked = currentConfig.use_elasticsearch;
+                document.getElementById('useDependencyParsing').checked = currentConfig.use_dependency_parsing;
+                document.getElementById('useEmbeddings').checked = currentConfig.use_embeddings;
+                document.getElementById('hybridAlpha').value = currentConfig.hybrid_alpha;
+                document.getElementById('topK').value = currentConfig.top_k;
+                
+                if (currentConfig.data_limit) {
+                    document.getElementById('dataLimit').value = currentConfig.data_limit;
+                }
+
+                // Update statistics if available
+                if (data.statistics && Object.keys(data.statistics).length > 0) {
+                    updateStatistics(data.statistics);
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        // Update configuration
+        async function updateConfig() {
+            const config = {
+                use_elasticsearch: document.getElementById('useElasticsearch').checked,
+                use_dependency_parsing: document.getElementById('useDependencyParsing').checked,
+                use_embeddings: document.getElementById('useEmbeddings').checked,
+                hybrid_alpha: parseFloat(document.getElementById('hybridAlpha').value),
+                top_k: parseInt(document.getElementById('topK').value),
+                data_limit: document.getElementById('dataLimit').value || null
+            };
+
+            try {
+                const data = await apiCall('/config', 'POST', config);
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    currentConfig = data.config;
+                } else {
+                    showAlert(data.error || 'Failed to update configuration', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize engine
+        async function initializeEngine() {
+            const dataFile = document.getElementById('dataFile').value;
+            
+            showAlert('Initializing search engine... This may take a few minutes.', 'info');
+            
+            // Show loading
+            document.getElementById('resultsContainer').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Initializing search engine...</p>
+                </div>
+            `;
+
+            try {
+                const data = await apiCall('/initialize', 'POST', { data_file: dataFile });
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    engineInitialized = true;
+                    document.getElementById('searchBtn').disabled = false;
+                    
+                    if (data.statistics) {
+                        updateStatistics(data.statistics);
+                    }
+                    
+                    loadStatus();
+                    document.getElementById('resultsContainer').innerHTML = '';
+                } else {
+                    showAlert(data.error || 'Failed to initialize engine', 'error');
+                    document.getElementById('resultsContainer').innerHTML = '';
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+                document.getElementById('resultsContainer').innerHTML = '';
+            }
+        }
+
+        // Reset engine
+        async function resetEngine() {
+            if (!confirm('Are you sure you want to reset the search engine?')) {
+                return;
+            }
+
+            try {
+                const data = await apiCall('/reset', 'POST');
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    engineInitialized = false;
+                    document.getElementById('searchBtn').disabled = true;
+                    document.getElementById('resultsContainer').innerHTML = '';
+                    document.getElementById('statistics').style.display = 'none';
+                    loadStatus();
+                } else {
+                    showAlert(data.error || 'Failed to reset engine', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Update statistics display
+        function updateStatistics(stats) {
+            const statsGrid = document.getElementById('statsGrid');
+            const statsDiv = document.getElementById('statistics');
+            
+            let html = '';
+            for (const [key, value] of Object.entries(stats)) {
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                let displayValue = value;
+                
+                if (Array.isArray(value)) {
+                    displayValue = value.join(' - ');
+                } else if (typeof value === 'number') {
+                    displayValue = value.toLocaleString();
+                }
+                
+                html += `
+                    <div class="stat-item">
+                        <div class="stat-label">${label}</div>
+                        <div class="stat-value">${displayValue}</div>
+                    </div>
+                `;
+            }
+            
+            statsGrid.innerHTML = html;
+            statsDiv.style.display = 'block';
+        }
+
+        // Set query from example
+        function setQuery(query) {
+            document.getElementById('searchQuery').value = query;
+        }
+
+        // Perform search
+        async function performSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
+            
+            if (!query) {
+                showAlert('Please enter a search query', 'error');
+                return;
+            }
+
+            if (!engineInitialized) {
+                showAlert('Please initialize the engine first', 'error');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('resultsContainer').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Searching...</p>
+                </div>
+            `;
+
+            try {
+                const data = await apiCall('/search', 'POST', {
+                    query: query,
+                    top_k: parseInt(document.getElementById('topK').value),
+                    verbose: false
+                });
+                
+                if (data.success) {
+                    displayResults(data.results, data.query);
+                } else {
+                    showAlert(data.error || 'Search failed', 'error');
+                    document.getElementById('resultsContainer').innerHTML = '';
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+                document.getElementById('resultsContainer').innerHTML = '';
+            }
+        }
+
+        // Display search results
+        function displayResults(results, query) {
+            const container = document.getElementById('resultsContainer');
+            
+            if (!results || results.length === 0) {
+                container.innerHTML = '<div class="loading"><p>No results found</p></div>';
+                return;
+            }
+
+            let html = `<h3>Found ${results.length} results for "${query}"</h3>`;
+            
+            results.forEach((result, index) => {
+                html += `
+                    <div class="result-item">
+                        <div class="result-title">${index + 1}. ${result.product}</div>
+                        ${result.description ? `
+                            <div style="color: #666; margin: 10px 0; line-height: 1.5;">
+                                ${result.description.length > 200 ? result.description.substring(0, 200) + '...' : result.description}
+                            </div>
+                        ` : ''}
+                        <div class="result-meta">
+                            <div class="result-meta-item">
+                                <strong>Brand:</strong> ${result.brand || 'N/A'}
+                            </div>
+                            <div class="result-meta-item">
+                                <strong>Price:</strong> $${result.price.toFixed(2)}
+                            </div>
+                            ${result.rating ? `
+                                <div class="result-meta-item">
+                                    <strong>Rating:</strong> ${result.rating}/5.0 (${result.reviews_count || 0} reviews)
+                                </div>
+                            ` : ''}
+                            ${result.category ? `
+                                <div class="result-meta-item">
+                                    <strong>Category:</strong> ${result.category}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="result-score">
+                            Relevance: ${(result.score * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

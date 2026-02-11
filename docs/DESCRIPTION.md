@@ -47,9 +47,12 @@ The solution follows a modular architecture as defined in the project plan:
     * The user query is vectorized.
     * **Cosine Similarity** is calculated between the query vector and product vectors to rank results based on relevance.
 
-5. **Dependency Parsing:** To better understand relationships between words (e.g., "bike with child seat" vs "bike for child").
+5. **Dependency Parsing:** **IMPLEMENTED** - Uses spaCy to understand relationships between words (e.g., "bike with child seat" vs "bike for child"). Extracts compound terms, prepositional relationships, and key concepts from queries.
 
-6. **Word Embeddings:** Integration of Word2Vec/FastText to capture deep semantic synonyms (e.g., associating "hills" with "mountain bike/MTB").
+6. **Word Embeddings:** **IMPLEMENTED** - Integration of Sentence Transformers to capture deep semantic synonyms (e.g., associating "hills" with "mountain bike/MTB"). Includes:
+   - Query expansion with semantic terms
+   - Hybrid scoring (TF-IDF + embeddings)
+   - Dense vector search in Elasticsearch
 
 ## 4. Technical Implementation
 
@@ -61,3 +64,6 @@ The project is built using **Python** and leverages the following logic:
     * `pandas` for data structure management.
     * `scikit-learn` for TF-IDF vectorization and pairwise metrics.
     * `nltk` for stemming, tokenization, and POS tagging.
+    * `spacy` for advanced dependency parsing and linguistic analysis.
+    * `sentence-transformers` for semantic embeddings and similarity.
+    * `elasticsearch` for scalable indexing and vector search.
